@@ -1,0 +1,37 @@
+---
+steps:
+
+  - label: ':hammer_and_wrench: :hammer_and_wrench: Run all tests'
+    command: ./ops/bin/test.sh
+    retry:
+      automatic:
+        - exit_status: -1 # agent is lost
+          limit: 2
+    agents:
+      queue: fma-dev-dflt
+
+  - wait
+
+  - label: ':docker: :buildkite: Build & Push App image'
+    command: ./ops/bin/build-and-publish-image.sh
+    branches: master
+    retry:
+      automatic:
+        - exit_status: -1 # agent is lost
+          limit: 2
+    agents:
+      queue: fma-dev-dflt
+
+  - wait
+
+  - block: ':rocket: Click to deploy'
+    branches: master
+
+  - label: ':partyparrot: Deploy app to Europa Preprod'
+    command: ./ops/bin/deploy.sh
+    branches: master
+    agents:
+      queue: europa-preprod-fma
+
+
+

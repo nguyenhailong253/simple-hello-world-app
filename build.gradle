@@ -1,0 +1,30 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+
+application {
+    mainClassName = 'HelloWorldApplication'
+}
+
+repositories {
+    mavenCentral()
+    jcenter()
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12', "org.mockito:mockito-core:1.+"
+    compile 'com.google.code.gson:gson:2.8.+'
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'HelloWorldApplication'
+    }
+
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+}

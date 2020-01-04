@@ -1,0 +1,94 @@
+---
+kind: "Template"
+apiVersion: "v1"
+metadata:
+  name: "long-hello-world-template"
+  annotations:
+    description: "long-hello-world app release template"
+objects:
+
+  - kind: Deployment
+    apiVersion: apps/v1
+    metadata:
+      name: "long-hello-world-deployment"
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          app: "long-hello-world"
+      template:
+        metadata:
+          labels:
+            app: "long-hello-world"
+        spec:
+          containers:
+            - image: "945367126992.dkr.ecr.ap-southeast-2.amazonaws.com/long-hello-world-app:$(imageTag)"
+              env:
+                - name: OWNER_NAME
+                  valueFrom:
+                    secretKeyRef:
+                      key: OWNER
+                      name: long-hello-world-secret
+              name: long-hello-world-app
+              ports:
+                - containerPort: 8000
+              livenessProbe:
+                httpGet: # to perform a probe, kubelet send get request to /, success when 200 <= response <= 400, if not 200, kill the container and restart
+                  path: /users
+                  port: 8000
+                initialDelaySeconds: 3
+                periodSeconds: 2
+                failureThreshold: 2
+              readinessProbe: # pod will start without receiving traffic until this probe succeeds
+                httpGet:
+                  path: /
+                  port: 8000
+                initialDelaySeconds: 1
+                periodSeconds: 1
+                successThreshold: 1
+
+  - kind: Service
+    apiVersion: v1
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+      name: "long-hello-world-service"
+      namespace: "fma"
+      labels:
+        app: "long-hello-world"
+        namespace: "fma"
+    spec:
+      ports:
+        - port: 80
+          targetPort: 8000
+      selector:
+        app: "long-hello-world"
+
+  - kind: Ingress
+    apiVersion: extensions/v1beta1
+    metadata:
+      annotations:
+        "kubernetes.io/tls-acme": "true"
+      name: "long-hello-world-ingress"
+      namespace: "fma"
+      labels:
+        app: "long-hello-world"
+    spec:
+      rules:
+        - host: "longhelloworld.svc.platform.myobdev.com"
+          http:
+            paths:
+              - backend:
+                  serviceName: "long-hello-world-service"
+                  servicePort: 80
+                path: /
+      tls:
+        - hosts:
+            - "longhelloworld.svc.platform.myobdev.com"
+          secretName: "longhelloworld-tls"
+
+parameters:
+  - name: "imageTag"
+    description: "tag of Docker image"
+    required: true
+    parameterType: int
